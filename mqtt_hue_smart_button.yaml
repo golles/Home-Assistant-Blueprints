@@ -1,0 +1,69 @@
+blueprint:
+  name: MQTT - Hue smart button (press and hold)
+  description: Blueprint for press and hold actions for a Hue smart button.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/mqtt_hue_smart_button.yaml
+  input:
+    smart_button:
+      name: Smart button
+      description: Hue smart button to use (pick the sensor that end with _action).
+      selector:
+        entity:
+          integration: mqtt
+          domain: sensor
+    press_action:
+      name: Press
+      description: Action to run on button press.
+      default: []
+      selector:
+        action:
+    hold_action:
+      name: Hold
+      description: Action to run on button hold.
+      default: []
+      selector:
+        action:
+    hold_cooldown:
+      name: Hold cool down
+      description: Prevent this automation from being ran more often than only once while in this cool down.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: seconds
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  platform: state
+  entity_id: !input smart_button
+  to:
+    - 'on'
+    - 'off'
+    - 'hold'
+
+action:
+  - choose:
+    # Button is being pressed.
+    - conditions:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state.state in ['on', 'off'] }}
+      sequence: !input press_action
+
+    # Button is being hold.
+    - conditions:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state.state == 'hold' }}
+      sequence: 
+        - choose:
+          - conditions:
+            - condition: template
+              value_template: >
+                {{ true }}
+            sequence: !input hold_action
+        - delay:
+           seconds: !input hold_cooldown

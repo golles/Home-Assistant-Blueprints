@@ -1,0 +1,129 @@
+blueprint:
+  name: Motion-activated Light, like Hue
+  description: Turn on a light when motion is detected, drop brightness before switching off.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/motion_light_like_hue.yaml
+  input:
+    motion_entity:
+      name: Motion sensor
+      selector:
+        entity:
+          device_class: motion
+    no_motion_wait:
+      name: Wait time
+      description: Time to leave the light on, with less brightness, after last motion is detected.
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: seconds
+          mode: slider
+    light_entity:
+      name: Light
+      selector:
+        entity:
+          domain: light
+    brightness_drop:
+      name: Brightness drop
+      description: Set light brightness to this percentage before turning off.
+      default: 70
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    illuminance_entity:
+      name: Illuminance sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    illuminance_below:
+      name: Minimum illuminance
+      description: The light will only switch on when the illuminance is bellow this value.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+          mode: box
+    day_start_time:
+      name: Day start time
+      description: From this time the day profile will be used to switch on the light.
+      default: '07:00'
+      selector:
+        time:
+    day_end_time:
+      name: Day end time
+      description: Till this time the day profile will be used to switch on the light.
+      default: '23:00'
+      selector:
+        time: 
+    day_profile:
+      name: Day time profile name
+      description: The default is reading.
+      default: reading
+    night_profile:
+      name: Night time profile name
+      description: The default is relax.
+      default: relax
+
+# If motion is detected within the delay, we restart the script.
+# If there is no motion, the brightness drops before turning off.
+mode: restart
+max_exceeded: silent
+
+trigger:
+  platform: state
+  entity_id: !input motion_entity
+  from: "off"
+  to: "on"
+
+condition:
+  - condition: numeric_state
+    entity_id: !input illuminance_entity
+    below: !input illuminance_below
+
+action:
+  - choose:
+    # Day time.
+    - conditions:
+        - condition: time
+          after: !input day_start_time
+          before: !input day_end_time
+      sequence:
+        - service: light.turn_on
+          data:
+            entity_id: !input light_entity
+            profile: !input day_profile
+            transition: 5
+    # Other times
+    default:
+      - service: light.turn_on
+        data:
+          entity_id: !input light_entity
+          profile: !input night_profile
+          transition: 1
+
+  - wait_for_trigger:
+      platform: state
+      entity_id: !input motion_entity
+      from: "on"
+      to: "off"
+
+  - service: light.turn_on
+    data:
+      entity_id: !input light_entity
+      brightness_pct: !input brightness_drop
+      transition: 1
+
+  - delay: !input no_motion_wait
+
+  - service: light.turn_off
+    data:
+      entity_id: !input light_entity
