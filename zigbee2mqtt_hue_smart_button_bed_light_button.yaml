@@ -1,0 +1,127 @@
+blueprint:
+  name: Zigbee2MQTT - Hue smart button - press and hold actions for a bed light button
+  description: |
+    This button blueprint allows you to setup automatic for a bed light button, clicking the button will turn on/off
+    the bed led, holding the button will turn on/off the ceiling light.
+    This automation does require to setup light profiles, a light profile contains the color (in xy), birghtness 
+    and a transition time. This makes the automation much simpler plus it allows you to maintain these states in a 
+    general place. For more information about light profiles, you could check the documentation 
+    https://www.home-assistant.io/integrations/light/
+    This automation should work with any lights, but only with Philips Hue smart button connected throught Zigbee2MQTT.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/zigbee2mqtt_hue_smart_button_bed_light_button.yaml
+  input:
+    smart_button:
+      name: Smart button
+      description: Hue smart button to use (pick the sensor that end with _action).
+      selector:
+        entity:
+          integration: mqtt
+          domain: sensor
+    light_entity_bed:
+      name: Night stand light
+      selector:
+        entity:
+          domain: light
+    light_entity_ceiling:
+      name: Ceiling light
+      selector:
+        entity:
+          domain: light
+    day_start_time:
+      name: Day start time
+      description: From this time the day profile will be used to switch on the light.
+      default: '08:00'
+      selector:
+        time:
+    day_end_time:
+      name: Day end time
+      description: Till this time the day profile will be used to switch on the light.
+      default: '23:00'
+      selector:
+        time:
+    day_profile:
+      name: Day time profile name
+      description: The default is reading.
+      default: reading
+    night_profile:
+      name: Night time profile name
+      description: The default is energize.
+      default: energize
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  platform: state
+  entity_id: !input smart_button
+  to:
+    - "on"
+    - "off"
+    - "hold"
+
+action:
+  - variables:
+      to_state: "{{ trigger.to_state.state }}"
+
+  - choose:
+    # Button is being pressed.
+    - conditions:
+      - "{{ to_state in ['on', 'off'] }}"
+      sequence:
+        - choose:
+          - conditions:
+              - condition: state
+                entity_id: !input light_entity_bed
+                state: "off"
+            sequence:
+              - choose:
+                - conditions:
+                    - condition: time
+                      after: !input day_start_time
+                      before: !input day_end_time
+                  sequence:
+                    - service: light.turn_on
+                      data:
+                        entity_id: !input light_entity_bed
+                        profile: !input day_profile
+                default:
+                  - service: light.turn_on
+                    data:
+                      entity_id: !input light_entity_bed
+                      profile: !input night_profile
+          default:
+            - service: light.turn_off
+              entity_id: !input light_entity_bed
+
+    # Button is being hold.
+    - conditions:
+      - "{{ to_state == 'hold' }}"
+      sequence:
+        - choose:
+          - conditions:
+              - condition: state
+                entity_id: !input light_entity_ceiling
+                state: "off"
+            sequence:
+              - choose:
+                - conditions:
+                    - condition: time
+                      after: !input day_start_time
+                      before: !input day_end_time
+                  sequence:
+                    - service: light.turn_on
+                      data:
+                        entity_id: !input light_entity_ceiling
+                        profile: !input day_profile
+                default:
+                  - service: light.turn_on
+                    data:
+                      entity_id: !input light_entity_ceiling
+                      profile: !input night_profile
+          default:
+            - service: light.turn_off
+              data:
+                entity_id: !input light_entity_ceiling
+        - delay:
+            seconds: 5

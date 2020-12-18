@@ -1,8 +1,18 @@
 blueprint:
-  name: Motion-activated Light, like Hue
-  description: Turn on a light when motion is detected, drop brightness before switching off.
+  name: Motion-activated light profiles based on time and light level and with a grace period.
+  description: |
+    This motion-activated blueprint allows you to setup automatic light switching like the Philips Hue motion 
+    sensors do. When motion is detected, the light will be turned on, when the motion is no longer detected,
+    the lights will go to another state for a given amount of seconds before switching off.
+    This allows anyone to not be left in the dark, you will be warned before the light switches off.
+
+    This automation does require to setup light profiles, a light profile contains the color (in xy), birghtness 
+    and a transition time. This makes the automation much simpler plus it allows you to maintain these states in a 
+    general place. For more information about light profiles, you could check the documentation 
+    https://www.home-assistant.io/integrations/light/
+    This automation should work with any lights, motion sensors and illuminance sensors.
   domain: automation
-  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/motion_light_like_hue.yaml
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/motion-activated_light_profiles.yaml
   input:
     motion_entity:
       name: Motion sensor
@@ -25,17 +35,6 @@ blueprint:
       selector:
         entity:
           domain: light
-    brightness_drop:
-      name: Brightness drop
-      description: Set light brightness to this percentage before turning off.
-      default: 70
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 1
-          unit_of_measurement: "%"
-          mode: slider
     illuminance_entity:
       name: Illuminance sensor
       selector:
@@ -68,7 +67,15 @@ blueprint:
       name: Day time profile name
       description: The default is reading.
       default: reading
+    day_profile_before_off:
+      name: Day time profile name
+      description: The default is concentrate.
+      default: concentrate
     night_profile:
+      name: Night time profile name
+      description: The default is energize.
+      default: energize
+    night_profile_before_off:
       name: Night time profile name
       description: The default is relax.
       default: relax
@@ -101,14 +108,12 @@ action:
           data:
             entity_id: !input light_entity
             profile: !input day_profile
-            transition: 5
     # Other times
     default:
       - service: light.turn_on
         data:
           entity_id: !input light_entity
           profile: !input night_profile
-          transition: 1
 
   - wait_for_trigger:
       platform: state
@@ -116,11 +121,24 @@ action:
       from: "on"
       to: "off"
 
-  - service: light.turn_on
-    data:
-      entity_id: !input light_entity
-      brightness_pct: !input brightness_drop
-      transition: 1
+
+  - choose:
+    # Day time.
+    - conditions:
+        - condition: time
+          after: !input day_start_time
+          before: !input day_end_time
+      sequence:
+        - service: light.turn_on
+          data:
+            entity_id: !input light_entity
+            profile: !input day_profile_before_off
+    # Other times
+    default:
+      - service: light.turn_on
+        data:
+          entity_id: !input light_entity
+          profile: !input night_profile_before_off
 
   - delay: !input no_motion_wait
 
