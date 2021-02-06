@@ -1,0 +1,77 @@
+blueprint:
+  name: Zigbee2MQTT - Xiaomi switch (WXKG01LM and WXKG11LM))
+  description: |
+    This blueprint allows you to make automations for the Xiaomi Aqara switch and Xiaomi MiJia wireless switch, connected to Zigbee2MQTT.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/zigbee2mqtt_xiaomi_switch.yaml
+  input:
+    switch:
+      name: Switch
+      description: Switch to use (pick the sensor that ends with _action).
+      selector:
+        entity:
+          integration: mqtt
+          domain: sensor
+    single:
+      name: Single press action
+      description: Action to run on single press
+      default: []
+      selector:
+        action: {}
+    double:
+      name: Double press action
+      description: Action to run on double press
+      default: []
+      selector:
+        action: {}
+    triple:
+      name: Triple press action
+      description: Action to run on triple press
+      default: []
+      selector:
+        action: {}
+    quadruple:
+      name: Quadruple press action
+      description: Action to run on quadruple press
+      default: []
+      selector:
+        action: {}
+    hold:
+      name: Hold action
+      description: Action to run on hold
+      default: []
+      selector:
+        action: {}
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input switch
+    to:
+      - "single"
+      - "double"
+      - "triple"
+      - "quadruple"
+      - "hold"
+    
+action:
+  - variables:
+      to_state: "{{ trigger.to_state.state }}"
+
+  - choose:
+    - conditions: "{{ to_state == 'single' }}"
+      sequence: !input single
+
+    - conditions: "{{ to_state == 'double' }}"
+      sequence: !input double
+
+    - conditions: "{{ to_state == 'triple' }}"
+      sequence: !input triple
+
+    - conditions: "{{ to_state == 'quadruple' }}"
+      sequence: !input quadruple
+
+    - conditions: "{{ to_state == 'hold' }}"
+      sequence: !input hold
