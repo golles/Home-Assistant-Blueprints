@@ -19,9 +19,20 @@ blueprint:
       selector:
         entity:
           device_class: motion
+    cool_down:
+      name: Cool down period
+      description: Number of seconds before dimming the brightness when motion is no longer detected.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: seconds
+          mode: slider
     no_motion_wait:
       name: Wait time
-      description: Time to leave the light on, with less brightness, after last motion is detected.
+      description: Number of seconds to leave the light on with turning off profile.
       default: 15
       selector:
         number:
@@ -64,19 +75,19 @@ blueprint:
       selector:
         time: 
     day_profile:
-      name: Day time profile name
+      name: Day time profile name when turning on
       description: The default is reading.
       default: reading
     day_profile_before_off:
-      name: Day time profile name
+      name: Day time profile name before turning off
       description: The default is concentrate.
       default: concentrate
     night_profile:
-      name: Night time profile name
+      name: Night time profile name when turning on
       description: The default is energize.
       default: energize
     night_profile_before_off:
-      name: Night time profile name
+      name: Night time profile name before turning off
       description: The default is relax.
       default: relax
 
@@ -120,7 +131,7 @@ action:
       entity_id: !input motion_entity
       from: "on"
       to: "off"
-
+      for: !input cool_down
 
   - choose:
     # Day time.
