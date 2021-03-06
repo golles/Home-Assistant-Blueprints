@@ -5,6 +5,11 @@ As you might see, I heavily depend on light profiles, as this is easier to main,
 If you think anything is wrong with the blueprint, feel free to create an issue.
 
 ## Changelog
+**March 6, 2021**
+ - motion-activated_light_profiles.yaml
+	 - Check if a light is still on when dimming it, this fixes an issue that when a light is turned of by the user is not turned on by the automation in dimmed profile.
+
+## Changelog
 **Februari 6, 2021**
  - motion-activated_light_profiles.yaml
 	 - Adding a cool down period
