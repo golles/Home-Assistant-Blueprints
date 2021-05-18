@@ -13,32 +13,38 @@ blueprint:
           integration: mqtt
           domain: sensor
     single:
-      name: Single press action
+      name: Single press action(s)
       description: Action to run on single press
       default: []
       selector:
         action: {}
     double:
-      name: Double press action
+      name: Double press action(s)
       description: Action to run on double press
       default: []
       selector:
         action: {}
     triple:
-      name: Triple press action
+      name: Triple press action(s)
       description: Action to run on triple press
       default: []
       selector:
         action: {}
     quadruple:
-      name: Quadruple press action
+      name: Quadruple press action(s)
       description: Action to run on quadruple press
       default: []
       selector:
         action: {}
     hold:
-      name: Hold action
+      name: Hold action(s)
       description: Action to run on hold
+      default: []
+      selector:
+        action: {}
+    release:
+      name: Release action(s)
+      description: Action to run on release
       default: []
       selector:
         action: {}
@@ -55,6 +61,7 @@ trigger:
       - "triple"
       - "quadruple"
       - "hold"
+      - "release"
     
 action:
   - variables:
@@ -75,3 +82,6 @@ action:
 
     - conditions: "{{ to_state == 'hold' }}"
       sequence: !input hold
+
+    - conditions: "{{ to_state == 'release' }}"
+      sequence: !input release

@@ -5,6 +5,14 @@ As you might see, I heavily depend on light profiles, as this is easier to main,
 If you think anything is wrong with the blueprint, feel free to create an issue.
 
 ## Changelog
+**May 18, 2021**
+ - door-window-climate-control.yaml
+	 - Added simple blueprint to switch off a climate entity when a door opens.
+ - zigbee2mqtt_hue_smart_button_press_and_hold_actions.yaml
+   - Added new blueprint for the hue smart button with press and hold actions.
+ - zigbee2mqtt_xiaomi_switch.yaml
+   - Added release action.
+
 **March 6, 2021**
  - motion-activated_light_profiles.yaml
 	 - Check if a light is still on when dimming it, this fixes an issue that when a light is turned of by the user is not turned on by the automation in dimmed profile.

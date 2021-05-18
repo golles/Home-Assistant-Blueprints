@@ -1,0 +1,65 @@
+blueprint:
+  name: Door/window based climate control
+  description: |
+    This blueprint will set the hvac mode of a climate entity based on the state of a door or window (or any other binary_sensor).
+    When it's open (binary_sensor on) hvac mode is set to off.
+    When it's close (binary_sensor off) hvac mode is set to auto.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/door-window-climate-control.yaml
+  input:
+    door_entity:
+      name: Door/window entity
+      description: or any other binary_sensor.
+      selector:
+        entity:
+          domain: binary_sensor
+    climate_entity:
+      name: Climate entity
+      selector:
+        entity:
+          domain: climate
+    turn_off_delay:
+      name: Turn off delay
+      description: Time to wait before turning off, eg. don't turn off when the door/window is open for a few seconds.
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 600
+          unit_of_measurement: seconds
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input door_entity
+    from: "off"
+    to: "on"
+  - platform: state
+    entity_id: !input door_entity
+    from: "on"
+    to: "off"
+
+action:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input door_entity
+            state: "on"
+        sequence:
+          - alias: Door or window opened, now wait.
+            delay: !input turn_off_delay
+
+          - alias: Turn off climate.
+            service: climate.set_hvac_mode
+            entity_id: !input climate_entity
+            data:
+              hvac_mode: "off"
+
+    default:
+      - alias: Turn on climate.
+        service: climate.set_hvac_mode
+        entity_id: !input climate_entity
+        data:
+          hvac_mode: auto
