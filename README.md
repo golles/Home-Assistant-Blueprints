@@ -5,6 +5,10 @@ As you might see, I heavily depend on light profiles, as this is easier to maint
 If you think anything is wrong with the blueprint, feel free to create an issue.
 
 ## Changelog
+**October 10, 2021**
+  - motion-activated_light_profiles.yaml
+	  - Either check if the illuminance is below the threshold or when the light is on. The Hue motion sensor picks up illuminance quickly and therefor the automation didn't restart due no longer under the threshold.
+
 **July 29, 2021**
 	- zigbee2mqtt_aqara_magic_cube.yaml
 		- New blueprint for the Aqara Magic Cube.

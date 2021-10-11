@@ -65,13 +65,13 @@ blueprint:
     day_start_time:
       name: Day start time
       description: From this time the day profile will be used to switch on the light.
-      default: '07:00'
+      default: "07:00"
       selector:
         time:
     day_end_time:
       name: Day end time
       description: Till this time the day profile will be used to switch on the light.
-      default: '23:00'
+      default: "23:00"
       selector:
         time: 
     day_profile:
@@ -102,43 +102,19 @@ trigger:
   from: "off"
   to: "on"
 
-condition:
-  - condition: numeric_state
-    entity_id: !input illuminance_entity
-    below: !input illuminance_below
-
 action:
   - choose:
-    # Day time.
     - conditions:
-        - condition: time
-          after: !input day_start_time
-          before: !input day_end_time
-      sequence:
-        - service: light.turn_on
-          data:
+        condition: or
+        conditions:
+          # The illuminance should be below the given value...
+          - condition: numeric_state
+            entity_id: !input illuminance_entity
+            below: !input illuminance_below
+          # ...or the light is already on (the illuminance might have gone up when the lights turned on).
+          - condition: state
             entity_id: !input light_entity
-            profile: !input day_profile
-    # Other times
-    default:
-      - service: light.turn_on
-        data:
-          entity_id: !input light_entity
-          profile: !input night_profile
-
-  - wait_for_trigger:
-      platform: state
-      entity_id: !input motion_entity
-      from: "on"
-      to: "off"
-      for: !input cool_down
-
-  - choose:
-    # Only continue when the light is still on, user might have turned it off manually.
-    - conditions:
-        - condition: state
-          entity_id: !input light_entity
-          state: 'on'
+            state: "on"
       sequence:
         - choose:
           # Day time.
@@ -147,19 +123,58 @@ action:
                 after: !input day_start_time
                 before: !input day_end_time
             sequence:
-              - service: light.turn_on
+              - alias: Turn on light with day profile
+                service: light.turn_on
                 data:
                   entity_id: !input light_entity
-                  profile: !input day_profile_before_off
+                  profile: !input day_profile
           # Other times
           default:
-            - service: light.turn_on
+            - alias: Turn on light with night profile
+              service: light.turn_on
               data:
                 entity_id: !input light_entity
-                profile: !input night_profile_before_off
+                profile: !input night_profile
 
-        - delay: !input no_motion_wait
+        - alias: Wait untill there is no more motion
+          wait_for_trigger:
+            platform: state
+            entity_id: !input motion_entity
+            from: "on"
+            to: "off"
+            for: !input cool_down
 
-        - service: light.turn_off
-          data:
-            entity_id: !input light_entity
+        - choose:
+          # Only continue when the light is still on, user might have turned it off manually.
+          - conditions:
+              - condition: state
+                entity_id: !input light_entity
+                state: "on"
+            sequence:
+              - choose:
+                # Day time.
+                - conditions:
+                    - condition: time
+                      after: !input day_start_time
+                      before: !input day_end_time
+                  sequence:
+                    - alias: Turn on light with day before off profile
+                      service: light.turn_on
+                      data:
+                        entity_id: !input light_entity
+                        profile: !input day_profile_before_off
+                # Other times
+                default:
+                  - alias: Turn on light with night before off profile
+                    service: light.turn_on
+                    data:
+                      entity_id: !input light_entity
+                      profile: !input night_profile_before_off
+
+              - alias: Wait for the no motion wait delay
+                delay: !input no_motion_wait
+
+              - alias: Turn off the light
+                service: light.turn_off
+                data:
+                  entity_id: !input light_entity
