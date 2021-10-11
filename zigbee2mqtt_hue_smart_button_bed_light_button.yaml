@@ -31,13 +31,13 @@ blueprint:
     day_start_time:
       name: Day start time
       description: From this time the day profile will be used to switch on the light.
-      default: '08:00'
+      default: "08:00"
       selector:
         time:
     day_end_time:
       name: Day end time
       description: Till this time the day profile will be used to switch on the light.
-      default: '23:00'
+      default: "23:00"
       selector:
         time:
     day_profile:
