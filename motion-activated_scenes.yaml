@@ -1,0 +1,225 @@
+blueprint:
+  name: Motion-activated scenes based on time and light level and with a grace period.
+  description: |
+    This motion-activated blueprint allows you to setup automatic light switching like the Philips Hue motion 
+    sensors do. When motion is detected, the light will be turned on, when the motion is no longer detected,
+    the lights will go to another state for a given amount of seconds before switching off.
+    This allows anyone to not be left in the dark, you will be warned before the light switches off.
+    This automation should work with any lights, motion sensors and illuminance sensors.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/golles/Home-Assistant-Blueprints/main/motion-activated_scenes.yaml
+  input:
+    motion_entity:
+      name: Motion sensor
+      selector:
+        entity:
+          device_class: motion
+    cool_down:
+      name: Cool down period
+      description: Number of seconds before dimming the brightness when motion is no longer detected.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: seconds
+          mode: slider
+    no_motion_wait:
+      name: Wait time
+      description: Number of seconds to leave the light on with turning off scene.
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: seconds
+          mode: slider
+    light_entity:
+      name: Light
+      selector:
+        entity:
+          domain: light
+    illuminance_entity:
+      name: Illuminance sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    illuminance_below:
+      name: Minimum illuminance
+      description: The light will only switch on when the illuminance is bellow this value.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+          mode: box
+    illuminance_above:
+      name: Illuminance turn off
+      description: The light will switch off when the illuminance is above this value.
+      default: 40
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+          mode: box
+    day_start_time:
+      name: Day start time
+      description: From this time the day scene will be used to switch on the light.
+      default: "07:00"
+      selector:
+        time:
+    day_end_time:
+      name: Day end time
+      description: Till this time the day scene will be used to switch on the light.
+      default: "23:00"
+      selector:
+        time: 
+    day_scene:
+      name: Day time scene name when turning on
+      selector:
+        entity:
+          domain: scene
+    day_scene_before_off:
+      name: Day time scene name before turning off
+      selector:
+        entity:
+          domain: scene
+    night_scene:
+      name: Night time scene name when turning on
+      selector:
+        entity:
+          domain: scene
+    night_scene_before_off:
+      name: Night time scene name before turning off
+      selector:
+        entity:
+          domain: scene
+
+# If motion is detected within the delay, we restart the script.
+# If there is no motion, the brightness drops before turning off.
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input motion_entity
+    from: "off"
+    to: "on"
+  - platform: numeric_state
+    entity_id: !input illuminance_entity
+    below: !input illuminance_below
+    for:
+      minutes: 5
+  - platform: numeric_state
+    entity_id: !input illuminance_entity
+    above: !input illuminance_above
+    for:
+      minutes: 5
+
+condition:
+  - condition: state
+    entity_id: !input motion_entity
+    state: "on"
+    
+action:
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input illuminance_entity
+            above: !input illuminance_above
+          - condition: state
+            entity_id: !input light_entity
+            state: "on"
+        sequence:
+          - alias: Turn off the light, illuminance is high enough
+            service: light.turn_off
+            data:
+              transition: 1
+            target:
+              entity_id: !input light_entity
+
+      - conditions:
+          condition: or
+          conditions:
+            # The illuminance should be below the given value...
+            - condition: numeric_state
+              entity_id: !input illuminance_entity
+              below: !input illuminance_below
+            # ...or the light is already on (the illuminance might have gone up when the lights turned on).
+            - condition: state
+              entity_id: !input light_entity
+              state: "on"
+        sequence:
+          - choose:
+              # Day time.
+              - conditions:
+                  - condition: time
+                    after: !input day_start_time
+                    before: !input day_end_time
+                sequence:
+                  - alias: Turn on light with day scene
+                    service: scene.turn_on
+                    data:
+                      transition: 1
+                    target:
+                      entity_id: !input day_scene
+            # Other times
+            default:
+              - alias: Turn on light with night scene
+                service: scene.turn_on
+                data:
+                  transition: 1
+                target:
+                  entity_id: !input night_scene
+
+          - alias: Wait untill there is no more motion
+            wait_for_trigger:
+              platform: state
+              entity_id: !input motion_entity
+              from: "on"
+              to: "off"
+              for: !input cool_down
+
+          - choose:
+            # Only continue when the light are still on, user might have turned it off manually.
+            - conditions:
+                - condition: state
+                  entity_id: !input light_entity
+                  state: "on"
+              sequence:
+                - choose:
+                  # Day time.
+                  - conditions:
+                      - condition: time
+                        after: !input day_start_time
+                        before: !input day_end_time
+                    sequence:
+                      - alias: Turn on light with day before off scene
+                        service: scene.turn_on
+                        data:
+                          transition: 1
+                        target:
+                          entity_id: !input day_scene_before_off
+                  # Other times
+                  default:
+                    - alias: Turn on light with night before off scene
+                      service: scene.turn_on
+                      data:
+                        transition: 1
+                      target:
+                        entity_id: !input night_scene_before_off
+
+                - alias: Wait for the no motion wait delay
+                  delay: !input no_motion_wait
+
+                - alias: Turn off the light
+                  service: light.turn_off
+                  data:
+                    transition: 1
+                  target:
+                    entity_id: !input light_entity

@@ -8,6 +8,10 @@ As you might see, I heavily depend on light profiles, as this is easier to maint
 If you think anything is wrong with the blueprint, feel free to create an issue.
 
 ## Changelog
+**May 8, 2022**
+	- motion-activated_scenes.yaml
+  	- Since the new Philips Hue integration all the Hue scenes are exposed to Home Assistant. From this moment I switched from using light profiles to scenes. This blueprint is created from scratch with a new option to turn lights off when the illuminance is getting above a certain treshold.
+
 **October 10, 2021**
   - motion-activated_light_profiles.yaml
 	  - Either check if the illuminance is below the threshold or when the light is on. The Hue motion sensor picks up illuminance quickly and therefor the automation didn't restart due no longer under the threshold.
