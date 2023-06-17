@@ -1,3 +1,9 @@
+# Maintenance  note
+
+I'm no longer maintaining this repository. To find the latest version of my blueprints, visit my [Home Assistant config repo](https://github.com/golles/Home-Assistant-Config#blueprints)
+
+---
+
 # Home Assistant Blueprints
 
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
